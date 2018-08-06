@@ -1,0 +1,7 @@
+### .gitignore of the miezelb project ###
+
+# ignore all .pyc files
+*.pyc
+
+# ignore the notebook internal .spyproject/ directory
+.spyproject/
