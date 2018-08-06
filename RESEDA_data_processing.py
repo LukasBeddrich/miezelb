@@ -102,21 +102,6 @@ CFbw.initialize_post_square_mask(32, (12,2,25,2))
 #CFb2.initialize_pre_mask(128,4)
 #CFb2.load_specificjobdata(norm_mon = False, jobind = 0)
 
-#CFb1.contract_data( 0, 0, foil = (7,), tc = range(16), dump = 'cME33')
-#CFb2.contract_data( 0, 0, foil = (7,), tc = range(16), dump = 'cME33')
-
-#print '\nStart analysis\n'
-
-#CFb1.dump_to_memory('anacME33', CFb1._analysis(CFb1.get_from_memory('cME33')))
-
-#for job in CFbgw.jobs:
-#    CFbgw.contract_data(0, 0, tc = range(16), dump = 'contr_ME{}'.format(job.split('_')[1]))
-
-# =============================================================================
-# for job in CFw.jobs:
-#     CFw.contract_data(0, 0, range(16), dump = 'contr_ME{}'.format(job.split('_')[1]))
-# =============================================================================
-
 #%%
 # contraction and data analysis with sinus fit
 print '\nStart contraction calculation\n'
