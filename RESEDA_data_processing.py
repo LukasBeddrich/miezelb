@@ -157,11 +157,11 @@ CFbw.dump_to_memory('norm-pol_ana_c_ME_33', np.array((CFbw.get_from_memory('norm
 #%%
 print "\nExpand the polarization data again\n"
 
-CFbw.dump_to_memory('exp_norm-pol_ana_c_ME_33', np.array([CFbw._expand_data(CFbw.maskdict['pre_masks'][0], CFbw.local_memory['ana_c_ME_33'][0,0,:,:,2]), CFbw._expand_data(CFbw.maskdict['pre_masks'][0], CFbw.local_memory['ana_c_ME_33'][1,0,:,:,2])]))
+CFbw.dump_to_memory('exp_norm-pol_ana_c_ME_33', np.array([CFbw._expand_data(CFbw.maskdict['pre_masks'][0], CFbw.local_memory['norm-pol_ana_c_ME_33'][0]), CFbw._expand_data(CFbw.maskdict['pre_masks'][0], CFbw.local_memory['norm-pol_ana_c_ME_33'][1])]))
 
 for key in CFw.local_memory.keys():
     if "norm-pol" in key:
-        CFw.dump_to_memory('exp_{}'.format(key), np.array([CFw._expand_data(CFw.maskdict['pre_masks'][0], CFw.local_memory['ana_c_ME_{}'.format(key.split('_')[-1])][0,0,:,:,2]), CFw._expand_data(CFw.maskdict['pre_masks'][0], CFw.local_memory['ana_c_ME_{}'.format(key.split('_')[-1])][1,0,:,:,2])]))
+        CFw.dump_to_memory('exp_{}'.format(key), np.array([CFw._expand_data(CFw.maskdict['pre_masks'][0], CFw.local_memory['norm-pol_ana_c_ME_{}'.format(key.split('_')[-1])][0]), CFw._expand_data(CFw.maskdict['pre_masks'][0], CFw.local_memory['norm-pol_ana_c_ME_{}'.format(key.split('_')[-1])][1])]))
 
 
 
@@ -218,15 +218,18 @@ print '\nplotting the contrast over tau and maybe q'
 
 fig = plt.figure()
 for qind, q in enumerate(q_tau[0,0,:,0]):
-    plt.errorbar(x = q_tau[0,1,qind], xerr = q_tau[1,1,qind], y = C_q_tau[0,qind], yerr = C_q_tau[1,qind], label = '{}'.format(round(q, 5)) + r'$\pm$' + '{}'.format(q_tau[1,0,qind,0].round(5)), marker = 'o', ms = 6., ls = 'None')
+    plt.errorbar(x = q_tau[0,1,qind], xerr = q_tau[1,1,qind], y = C_q_tau[0,qind], label = '{}'.format(round(q, 4)) + r'$\pm$' + '{}'.format(q_tau[1,0,qind,0].round(4)) + r' $\AA^{-1}$', marker = 'o', ms = 6., ls = 'None')
+#    plt.errorbar(x = q_tau[0,1,qind], xerr = q_tau[1,1,qind], y = C_q_tau[0,qind], yerr = C_q_tau[1,qind], label = '{}'.format(round(q, 5)) + r'$\pm$' + '{}'.format(q_tau[1,0,qind,0].round(5)), marker = 'o', ms = 6., ls = 'None')
 plt.xscale('log')
 plt.legend(loc = 'best', numpoints = 1)
+plt.xlabel(r'$\tau_{MIEZE}$', fontsize = 14.)
 plt.xlim(xmin = 1.0e-7, xmax = 5.0)
+plt.ylabel(r'$C \propto \frac{S(q, \tau)}{S(q,0)}$', fontsize = 16.)
 plt.ylim(ymin = -0.05, ymax = 1.05)
 plt.show()
 
 
-
+#%%
 
 
 
