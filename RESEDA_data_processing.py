@@ -8,23 +8,23 @@ Created on Thu Oct  5 09:03:05 2017
 
 #%%
 
+from __future__ import print_function
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from sys import path
-from __future__ import print_function
 
-isin = False
-for p in path:
-    if 'miezelb' in p:
-        isin = True
-if not isin:
+if __name__ == '__main__':
+    try:
+        import RESEDA_MIEZE_data_treatment as RMdt
+    except ImportError:
+        print('RESEDA_MIEZE_data_treatment could not be found in std pathes.')
+else:
     path.append('/home/lbeddric/Dokumente/devpython/miezelb')
-
-try:
-    import RESEDA_MIEZE_data_treatment as RMdt
-except ImportError:
-    print
+    try:
+        import RESEDA_MIEZE_data_treatment as RMdt
+    except ImportError:
+        print('RESEDA_MIEZE_data_treatment could not be found in the added path.')
 
 #%%
 
