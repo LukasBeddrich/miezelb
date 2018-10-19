@@ -202,7 +202,7 @@ class Post_sector_mask(Mask_Base):
 #------------------------------------------------------------------------------
 
     def create_post_mask(self):
-        x,y = ogrid[:self.nn,:self.nn]
+        y,x = ogrid[:self.nn,:self.nn]
         cx,cy = self.centre
         
         #ensure stop angle > start angle
