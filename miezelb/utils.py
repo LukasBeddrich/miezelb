@@ -10,10 +10,14 @@ utilities
 ####################        IMPORTS        ####################################
 ###############################################################################
 
-from numpy import abs, random, sin, sqrt
+from numpy import abs, random, sin, sqrt, sum, zeros
 
 ###############################################################################
 ###############################################################################
+
+"""
+        FOR CONTRAST FITTING AND MIEZE ANALYSIS
+"""
 
 def sinus(x, amp, omega, phase, offset, randomize = True):
     """
@@ -66,13 +70,69 @@ def resid_sin(params, x, data, eps_data):
     
     return (data - y_th)/eps_data
 
+
+###############################################################################
+###############################################################################
+
+"""
+            FOR THE alternative constructor of DataFrame_NICOS objects
+"""
+
+def gen_filename(experiment_number, file_number):
+    """
+    generates NICOS data file names for TAS .dat and MIEZE .tof files
+    
+    Arguments:
+    ----------
+    experiment_number   : int   : usually a 5 digit number of an neutron scattering experiment (same as proposal)
+                                  if 0 is given, the file is deterimend to be a .tof file by CASCADE
+    file_number         : int   : up to 8 digit number describing a certain file of an experiment
+    
+    Return:
+    ----------
+    fname               : str   : filename constructed from input
+    """
+    
+    if experiment_number != 0:
+        return '{:05d}_{:08d}.dat'.format(experiment_number, file_number)
+    else:
+        return '{:08d}.tof'.format(experiment_number, file_number)
+
+###############################################################################
+###############################################################################
+
+"""
+            FOR DETERMINATION OF BEAMSPOTS ON THE 2D CASCADE detector
+"""
+
+def centcalc_by_weight(data):
+    """
+    Determines the center (of grtavity) of a neutron beam on a 2D detector by weigthing each pixel with its count
+    
+    Argments:
+    ----------
+    data        : ndarray   : l x m x n array with 'pixel' - data to weight over m and n
+    
+    Return:
+    ----------
+    centers     : ndarray   : l x 2 array with all the centers (cx, cy)
+    
+    INFO:
+    ----------
+    1. Method implemented by C. Herb
+    2. CHECK the order of cx, cy if it fits to all other interpretations of 2d dimnensions
+    """
+    
+    centerdata = zeros((data.shape[0], 2))
+    for row in centerdata:
+        x_int = sum(data,axis = 0)
+        y_int = sum(data,axis = 1)
+        row[0] = sum([i* xval for i,xval  in enumerate(x_int) ])/sum(x_int)
+        row[1] = sum([j* yval for j,yval in enumerate(y_int) ])/sum(y_int)
+    return centerdata
+    
+
 #------------------------------------------------------------------------------
-
-
-
-
-
-
 
 
 
