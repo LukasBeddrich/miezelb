@@ -53,16 +53,12 @@ class Instrument():
         retdict = {}
         try:
             for subkey in subkeys:
-                print(subkey)
                 if mainkey == 'MIRA':
-                    print('MIRA checkpoint 1')
                     par = cls.MIRA[subkey]
                     err = cls.MIRA['{}_err'.format(subkey)]
                     if err[1] != 'rel':
-                        print('MIRA checkpoint 2')
                         retdict[subkey] = (par[0], err[0], par[1])
                     else:
-                        print('MIRA checkpoint 3')
                         retdict[subkey] = (par[0], par[0] * err[0]/100.0, par[1])
                 elif mainkey == 'RESEDA':
                     par = cls.RESEDA[subkey]
