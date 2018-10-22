@@ -20,9 +20,146 @@ import utils
 from h5py import File
 from os import path
 from scipy.constants import h, m_n
-from numpy import arange, array, concatenate, linspace, ma, mean, nansum, where, sqrt, zeros
+from numpy import arange, array, concatenate, fromfile, int32, linspace, ma, mean, nansum, where, sqrt, zeros
 from lmfit import Parameters, minimize
 from math import pi
+
+
+
+###############################################################################
+###############################################################################
+
+class DataFrame_NICOS():
+    """
+    Base class providing meta and experimental data of the NICOS .tof files
+    of the MIRA and RESEDA instruments.
+    """
+    
+    def __init__(self, fname, drootpath = './data/CASCADE'):
+        """
+        Constructor for the MIRA and RESEDA DataFrame based on the NICOS .tof output
+        
+        Arguments:
+        ----------
+        fname       : str               : name of the data file (*.tof)
+        drootpath   : str               : path to the data directory, default './data/CASCADE'
+        
+        Return:
+        ----------
+        obj         : DataFrame_NICOS   : DataFrame_NICOS object associated with the given file.
+                                          Makes metadata and raw CASCADE output accessible with python
+        """
+        
+# =============================================================================
+#         # declare intance variables
+#         self._metadata = {}
+#         self._cascadedata = {}
+# =============================================================================
+        
+        # instantiate variables
+        self.fpath = path.join(drootpath, fname)
+        self._metadata = self.__extract_metadata()
+        self._cascadedata = self.__extract_cascadedata()
+
+#------------------------------------------------------------------------------
+        
+    @classmethod
+    def init_from_nums(cls, fnum, expnum = 0, drootpath = "./data/CASCADE"):
+        """
+        Alternative constructor from experiment- and filenumber
+        
+        Arguments:
+        ----------
+        expnum      : int               : number of the experiment/proposal
+        fnum        : int               : number of the file
+        drootpath   : str               : path to the data directory, default './data/CASCADE'
+        
+        Return:
+        ----------
+        obj         : DataFrame_NICOS   : DataFrame_NICOS object associated with the given file.
+                                          Makes metadata and raw CASCADE output accessible with python
+        """
+
+        return cls(utils.gen_filename(expnum, fnum), drootpath)
+
+#------------------------------------------------------------------------------
+        
+    def __extract_metadata(self):
+        """
+        extracts the metadata from NICOS .tof - file footers and stores it in self._metadata
+        
+        Arguments:
+        ----------
+        None
+        
+        Return:
+        ----------
+        metadata    : dict  : contains the most important metadata as returned by NICOS
+        """
+        
+        metadata = {'info' : {},
+                    'TAS' : {},
+                    'sample_table' : {},
+                    'MIEZE_setup' : {},
+                    'coils' : {},
+                    'fast_results' : {}}
+    
+        keys = {'info' : ['Exp_Remark', 'timer', 'mon2'],
+                'TAS' : ['Ef_value', 'Ei_value', 'ana_value', 'ath_value', 'att_value', 'ki_value', 'kf_value', 'lam_value', 'sth_value', 'stt_value'],
+                'sample_table' : ['stx_value', 'sty_value', 'stz_value'],
+                'MIEZE_setup' : ['echotime_value', 'cbox1_fg_freq_value', 'cbox2_fg_freq_value', 'psd_chop_freq_value', 'psd_timebin_freq_value'],
+                'coils' : ['hrf1_value', 'hrf2_value', 'hsf1_value', 'hsf2_value', 'sf1_value', 'sf2_value'],
+                'fast_results' : ['psd_channel.roi', 'psd_channel.total', 'fit.contrast', 'fit.contrastErr', 'roi.contrast', 'roi.contrastErr']}
+    
+        aliases = {'info' : ['Remark', 'time', 'monitor'],
+                   'TAS' : ['Ef', 'Ei', 'analysator_wavevector', 'ath', 'att', 'ki', 'kf', 'lambda', 'sth', 'stt'],
+                   'sample_table' : ['stx', 'sty', 'stz'],
+                   'MIEZE_setup' : ['tau_mieze', 'freq_A', 'freq_B', 'chop_freq', 'timebin_freq'],
+                   'coils' : ['B0_A', 'B0_B', 'BHelmholtz_A', 'BHemlholtz_B', 'Bflip_A', 'Bflip_B'],
+                   'fast_results' : ['roi_counts', 'total_counts', 'fit_contrast', 'fit_contrastErr', 'roi_contrast', 'roi_contrastErr']}
+    
+        with open(self.fpath, 'r') as f:
+            fi = f.readlines()
+            fi.reverse()
+            for i, line in enumerate(fi):
+                splitted_line = line.split()
+                for ky, kys in keys.items():
+                    try:
+                        if splitted_line[0] in kys and splitted_line[2] != splitted_line[-1]:
+                            temp = (float(splitted_line[2]), splitted_line[-1])
+                            metadata[ky][aliases[ky][keys[ky].index(splitted_line[0])]] = temp
+                        else:
+                            metadata[ky][aliases[ky][keys[ky].index(splitted_line[0])]] = splitted_line[2]
+                    except:
+                        pass
+                if i > len(fi)/4: # shorter runtime^^
+                    break
+        return metadata
+
+#------------------------------------------------------------------------------
+        
+    def __extract_cascadedata(self):
+        """
+        extracts the raw CASCADE-detector data from NICOS .tof - files and stores it in self._cascadedata
+        
+        Arguments:
+        ----------
+        None
+        
+        Return:
+        ----------
+        cascadedata     : ndarray   : returns a numpy.ndarray object of .shape = (8, 16, 128, 128) and dtype = np.int32
+                                      data format is (foil, timebins, ypixel, xpixel)
+        
+        INFO:
+        -----
+        Check whether it actually is ..., ypixel, xpixel) array
+        """
+        
+        return fromfile(self.fpath, dtype = int32)[:128*128,16,8].reshape(8,16,128,128)
+
+#------------------------------------------------------------------------------
+
 
 ###############################################################################
 ###############################################################################
@@ -76,7 +213,7 @@ class DataFrame_Base(object):
                             key = lambda s: int(s.split('_')[-1]))
 
 #------------------------------------------------------------------------------
-    
+
     def _calc_miezetau(self, **kwargs):
         """
         calculate mieze time from experimental setup
