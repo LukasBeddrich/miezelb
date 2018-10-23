@@ -35,7 +35,7 @@ class DataFrame_NICOS():
     of the MIRA and RESEDA instruments.
     """
     
-    def __init__(self, fname, drootpath = './data/CASCADE'):
+    def __init__(self, fname, drootpath = './data/cascade'):
         """
         Constructor for the MIRA and RESEDA DataFrame based on the NICOS .tof output
         --------------------------------------------------
@@ -163,11 +163,33 @@ class DataFrame_NICOS():
         return fromfile(self.fpath, dtype = int32)[:128*128*16*8].reshape(8,16,128,128)
 
 #------------------------------------------------------------------------------
+
+    def show_2D_panel(self, foil_index = 0, timebin_index = 0, **kwargs):
+        """
+        Fast visualization tool for 2D cascade data by specifing foil_index and timebin_index
+        --------------------------------------------------
         
+        Arguments:
+        ----------
+        foil_index      : int   : selects foil of the cascade data set
+        timebin_index   : int   : selects timebin of the cascade data set
+        
+        Returns:
+        ----------
+        None
+        """
+        
+        try:
+            self.show_image(self._cascadedata[foil_index, timebin_index])
+        except IndexError:
+            print("Probably foil_index = {} and timebin_index = {} are out of range with data array shape being {}".format(foil_index, timebin_index, self._cascadedata.shape[:2]))
+
+#------------------------------------------------------------------------------
+
     @staticmethod
     def show_image(Arr, cmap = plasma, norm = LogNorm(), origin = 'lower', **kwargs):
         """
-        Fast visualization tool for 2D cascade data
+        Fast visualization tool for 2D data if available as an array.
         --------------------------------------------------
         
         Arguments:
@@ -199,6 +221,54 @@ class DataFrame_NICOS():
             ax.imshow(Arr, cmap = cmap, origin = origin, **kwargs)
         ax.set_xlabel('horizontal detector range [pixel]')
         ax.set_ylabel('vertical detector range [pixel]')
+
+
+###############################################################################
+###############################################################################
+
+class AnalysisFrame_Base(DataFrame_NICOS):
+    """
+    AnalysisFrame class to apply individual analysis tools to the "DataFrame_NICOS"' raw data
+    Supports a 'local_memory' dictionary to store intermediate results
+    """
+    
+    def __init__(self, fname, drootpath = "./data/cascade", instrument = "MIRA"):
+        """
+        Constructor of an 'AnalysisFrame_Base' instance
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        fname       : str                   : name of the data file (*.tof)
+        drootpath   : str                   : path to the data directory, default './data/CASCADE'
+        instrument  : str                   : name of the instrument "MIRA", "RESEDA", "RESEDAlegacy" to use correct loading routine
+        
+        Return:
+        ----------
+        obj         : AnalysisFrame_NICOS   : AnalysisFrame_NICOS object associated with the given file.
+                                              Supports functionality for the MIEZE analysis and applies it to the loaded data
+        
+        INFO:
+        ----------
+        NEED to implement loader/DataFrame for "RESEDA" and "RESEDAlegacy" options
+        """
+        
+        if instrument == "MIRA":
+            DataFrame_NICOS.__init__(fname, drootpath)
+        
+        elif instrument == "RESEDA":
+            print("Loading RESEDA-NICOS data is not supported, yet.")
+        
+        elif instrument == "RESEDAlegacy":
+            print("Loading RESEDAlegacy-IGOR data is not supported, yet.")
+        
+        else:
+            print("No valid instrument has been specified, no data has been loaded. Options are: 'MIRA', 'RESEDA', 'RESEDAlegacy'")
+        
+        self.local_memory = {}
+        self.maskdict = {'pre_masks' : {}, 'post_masks' : {}}
+
+#------------------------------------------------------------------------------
 
 
 ###############################################################################
