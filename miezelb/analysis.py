@@ -38,6 +38,7 @@ class DataFrame_NICOS():
     def __init__(self, fname, drootpath = './data/CASCADE'):
         """
         Constructor for the MIRA and RESEDA DataFrame based on the NICOS .tof output
+        --------------------------------------------------
         
         Arguments:
         ----------
@@ -67,6 +68,7 @@ class DataFrame_NICOS():
     def init_from_nums(cls, fnum, expnum = 0, drootpath = "./data/CASCADE"):
         """
         Alternative constructor from experiment- and filenumber
+        --------------------------------------------------
         
         Arguments:
         ----------
@@ -87,6 +89,7 @@ class DataFrame_NICOS():
     def __extract_metadata(self):
         """
         extracts the metadata from NICOS .tof - file footers and stores it in self._metadata
+        --------------------------------------------------
         
         Arguments:
         ----------
@@ -141,6 +144,7 @@ class DataFrame_NICOS():
     def __extract_cascadedata(self):
         """
         extracts the raw CASCADE-detector data from NICOS .tof - files and stores it in self._cascadedata
+        --------------------------------------------------
         
         Arguments:
         ----------
@@ -156,9 +160,45 @@ class DataFrame_NICOS():
         Check whether it actually is ..., ypixel, xpixel) array
         """
         
-        return fromfile(self.fpath, dtype = int32)[:128*128,16,8].reshape(8,16,128,128)
+        return fromfile(self.fpath, dtype = int32)[:128*128*16*8].reshape(8,16,128,128)
 
 #------------------------------------------------------------------------------
+        
+    @staticmethod
+    def show_image(Arr, cmap = plasma, norm = LogNorm(), origin = 'lower', **kwargs):
+        """
+        Fast visualization tool for 2D cascade data
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        Arr         : ndarray   : 2D data to be visualized
+        **kwargs    : dict      : **kwargs will be passed to plt.imshow function
+        
+        Return:
+        ----------
+        None
+        
+        INFO:
+        ----------
+        
+        """
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        if kwargs['log']:
+            del kwargs['log']
+            ax.imshow(Arr, cmap = cmap, norm = norm, origin = origin, **kwargs)
+        else:
+            try:
+                del kwargs['log']
+            except KeyError:
+                pass
+            except:
+                print('Something, despite a KeyError, went wrong!')
+            ax.imshow(Arr, cmap = cmap, origin = origin, **kwargs)
+        ax.set_xlabel('horizontal detector range [pixel]')
+        ax.set_ylabel('vertical detector range [pixel]')
 
 
 ###############################################################################
