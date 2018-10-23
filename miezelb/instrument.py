@@ -32,6 +32,9 @@ class Instrument():
     RESEDA['wavelength_err'] = (10.0, 'rel')    # 'rel' meaning relative error in percent
     MIRA['wavelength'] = (4.33, 'A-1')
     MIRA['wavelength_err'] = (1.0, 'rel')
+    
+    RESEDA['foils'] = (7, 6, 5, 0, 1, 2)
+    MIRA['foils'] = (0, 5, 6, 1)
 
 #------------------------------------------------------------------------------
 
@@ -55,18 +58,24 @@ class Instrument():
             for subkey in subkeys:
                 if mainkey == 'MIRA':
                     par = cls.MIRA[subkey]
-                    err = cls.MIRA['{}_err'.format(subkey)]
-                    if err[1] != 'rel':
-                        retdict[subkey] = (par[0], err[0], par[1])
-                    else:
-                        retdict[subkey] = (par[0], par[0] * err[0]/100.0, par[1])
+                    try:
+                        err = cls.MIRA['{}_err'.format(subkey)]
+                        if err[1] != 'rel':
+                            retdict[subkey] = (par[0], err[0], par[1])
+                        else:
+                            retdict[subkey] = (par[0], par[0] * err[0]/100.0, par[1])
+                    except KeyError:
+                        retdict[subkey] = par
                 elif mainkey == 'RESEDA':
                     par = cls.RESEDA[subkey]
-                    err = cls.RESEDA['{}_err'.format(subkey)]
-                    if err[1] != 'rel':
-                        retdict[subkey] = (par[0], err[0], par[1])
-                    else:
-                        retdict[subkey] = (par[0], par[0] * err[0]/100.0, par[1])
+                    try:
+                        err = cls.RESEDA['{}_err'.format(subkey)]
+                        if err[1] != 'rel':
+                            retdict[subkey] = (par[0], err[0], par[1])
+                        else:
+                            retdict[subkey] = (par[0], par[0] * err[0]/100.0, par[1])
+                    except KeyError:
+                        retdict[subkey] = par
         except KeyError:
             print('A key was not recognized. Check for typing error! Individual catches will be implemented later...')
         
