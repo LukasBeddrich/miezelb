@@ -212,7 +212,7 @@ class DataFrame_NICOS():
         """
         
         try:
-            self.show_image(self._cascadedata[foil_index, timebin_index])
+            self.show_image(self._cascadedata[foil_index, timebin_index], **kwargs)
         except IndexError:
             print("Probably foil_index = {} and timebin_index = {} are out of range with data array shape being {}".format(foil_index, timebin_index, self._cascadedata.shape[:2]))
 
@@ -237,20 +237,10 @@ class DataFrame_NICOS():
         ----------
         
         """
-        
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        if kwargs['log']:
-            del kwargs['log']
-            ax.imshow(Arr, cmap = cmap, norm = norm, origin = origin, **kwargs)
-        else:
-            try:
-                del kwargs['log']
-            except KeyError:
-                pass
-            except:
-                print('Something, despite a KeyError, went wrong!')
-            ax.imshow(Arr, cmap = cmap, origin = origin, **kwargs)
+        ax.imshow(Arr, cmap = cmap, norm = norm, origin = origin, **kwargs)
         ax.set_xlabel('horizontal detector range [pixel]')
         ax.set_ylabel('vertical detector range [pixel]')
 
