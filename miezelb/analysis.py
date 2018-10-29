@@ -276,7 +276,7 @@ class AnalysisFrame_Base(DataFrame_NICOS):
         """
         
         if instrument == "MIRA":
-            DataFrame_NICOS.__init__(fname, drootpath)
+            DataFrame_NICOS.__init__(self, fname, drootpath)
         
         elif instrument == "RESEDA":
             print("Loading RESEDA-NICOS data is not supported, yet.")
@@ -287,8 +287,70 @@ class AnalysisFrame_Base(DataFrame_NICOS):
         else:
             print("No valid instrument has been specified, no data has been loaded. Options are: 'MIRA', 'RESEDA', 'RESEDAlegacy'")
         
-        self.local_memory = {}
-        self.maskdict = {'pre_masks' : {}, 'post_masks' : {}}
+        self._local_memory = {}
+        self._maskdict = {'pre_masks' : {}, 'post_masks' : {}}
+
+#------------------------------------------------------------------------------
+
+    def dump_to_memory(self, key, value):
+        """
+        stores value in '_local_memory'
+        supposed to reduce re-computing intermediate results for further processing
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        key     : str       : key to label value in _local_memory
+        value   : anything  : value to be stored in '_local_memory'
+        
+        Returns:
+        ----------
+        None
+        
+        INFO:
+        ----------
+        A consistent naming convention should be developed to indicate the changes and analysis steps performed
+        in comparison to prioir steps, or the raw data.
+        """
+        
+        self._local_memory.update({key : value})
+        return None
+
+#------------------------------------------------------------------------------
+    
+    def get_from_memory(self, key):
+        """
+        returns value from 'self.local_memory[key]'
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        key     : str   : key to label value in _local_memory
+        
+        Returns:
+        ----------
+        self._local_memory[key] : anything  : value to be stored in '_local_memory'
+        """
+        
+        return self._local_memory[key]
+    
+#------------------------------------------------------------------------------
+        
+    def remove_from_memory(self, key):
+        """
+        removes item with key from memory
+        
+        Arguments:
+        ----------
+        key     : str   : key to label value in _local_memory
+        
+        Returns:
+        ----------
+        None
+        """
+        
+        del self._local_memory[key]
+        return None
 
 #------------------------------------------------------------------------------
 
