@@ -164,6 +164,38 @@ class DataFrame_NICOS():
 
 #------------------------------------------------------------------------------
 
+    def get_metadata(self, *keys):
+        """
+        Returns the metadata specified by keys. Can be either 'mainkey' or 'subkey'.
+        Returns the entire dictionary if no key is given.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        *keys       : list  : list of keys for metadata retrieval
+        
+        Returns:
+        ----------
+        seldict     : dict  : dictionary containing metadata {'mainkey' : subdict, 'subkey' : item ,...}
+        """
+
+        seldict = {}
+        if keys:
+            for key in keys:
+                assert isinstance(key, str)
+                if key in self._metadata.keys():
+                    seldict.update({key : self._metadata[key]})
+                else:
+                    for subdict in self._metadata.itervalues():
+                        if key in subdict.keys():
+                            seldict.update({key : subdict[key]})
+            return seldict
+
+        else:
+            return self._metadata
+
+#------------------------------------------------------------------------------
+
     def show_2D_panel(self, foil_index = 0, timebin_index = 0, **kwargs):
         """
         Fast visualization tool for 2D cascade data by specifing foil_index and timebin_index
