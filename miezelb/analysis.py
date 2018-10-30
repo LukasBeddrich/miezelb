@@ -288,7 +288,7 @@ class AnalysisFrame_Base(DataFrame_NICOS):
             print("No valid instrument has been specified, no data has been loaded. Options are: 'MIRA', 'RESEDA', 'RESEDAlegacy'")
         
         self._local_memory = {}
-        self._maskdict = {'pre_masks' : {}, 'post_masks' : {}}
+        self._maskdict = {}
 
 #------------------------------------------------------------------------------
 
