@@ -20,9 +20,340 @@ import utils
 from h5py import File
 from os import path
 from scipy.constants import h, m_n
-from numpy import arange, array, concatenate, linspace, ma, mean, nansum, where, sqrt, zeros
+from numpy import arange, array, concatenate, fromfile, int32, linspace, ma, mean, nansum, where, sqrt, zeros
 from lmfit import Parameters, minimize
 from math import pi
+
+
+
+###############################################################################
+###############################################################################
+
+class DataFrame_NICOS():
+    """
+    Base class providing meta and experimental data of the NICOS .tof files
+    of the MIRA and RESEDA instruments.
+    """
+    
+    def __init__(self, fname, drootpath = './data/cascade'):
+        """
+        Constructor for the MIRA and RESEDA DataFrame based on the NICOS .tof output
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        fname       : str               : name of the data file (*.tof)
+        drootpath   : str               : path to the data directory, default './data/CASCADE'
+        
+        Return:
+        ----------
+        obj         : DataFrame_NICOS   : DataFrame_NICOS object associated with the given file.
+                                          Makes metadata and raw CASCADE output accessible with python
+        """
+        
+# =============================================================================
+#         # declare intance variables
+#         self._metadata = {}
+#         self._cascadedata = {}
+# =============================================================================
+        
+        # instantiate variables
+        self.fpath = path.join(drootpath, fname)
+        self._metadata = self.__extract_metadata()
+        self._cascadedata = self.__extract_cascadedata()
+
+#------------------------------------------------------------------------------
+        
+    @classmethod
+    def init_from_nums(cls, fnum, expnum = 0, drootpath = "./data/CASCADE"):
+        """
+        Alternative constructor from experiment- and filenumber
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        expnum      : int               : number of the experiment/proposal
+        fnum        : int               : number of the file
+        drootpath   : str               : path to the data directory, default './data/CASCADE'
+        
+        Return:
+        ----------
+        obj         : DataFrame_NICOS   : DataFrame_NICOS object associated with the given file.
+                                          Makes metadata and raw CASCADE output accessible with python
+        """
+
+        return cls(utils.gen_filename(expnum, fnum), drootpath)
+
+#------------------------------------------------------------------------------
+        
+    def __extract_metadata(self):
+        """
+        extracts the metadata from NICOS .tof - file footers and stores it in self._metadata
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        None
+        
+        Return:
+        ----------
+        metadata    : dict  : contains the most important metadata as returned by NICOS
+        """
+        
+        metadata = {'info' : {},
+                    'TAS' : {},
+                    'sample_table' : {},
+                    'MIEZE_setup' : {},
+                    'coils' : {},
+                    'fast_results' : {}}
+    
+        keys = {'info' : ['Exp_Remark', 'timer', 'mon2'],
+                'TAS' : ['Ef_value', 'Ei_value', 'ana_value', 'ath_value', 'att_value', 'ki_value', 'kf_value', 'lam_value', 'sth_value', 'stt_value'],
+                'sample_table' : ['stx_value', 'sty_value', 'stz_value'],
+                'MIEZE_setup' : ['echotime_value', 'cbox1_fg_freq_value', 'cbox2_fg_freq_value', 'psd_chop_freq_value', 'psd_timebin_freq_value'],
+                'coils' : ['hrf1_value', 'hrf2_value', 'hsf1_value', 'hsf2_value', 'sf1_value', 'sf2_value'],
+                'fast_results' : ['psd_channel.roi', 'psd_channel.total', 'fit.contrast', 'fit.contrastErr', 'roi.contrast', 'roi.contrastErr']}
+    
+        aliases = {'info' : ['Remark', 'time', 'monitor'],
+                   'TAS' : ['Ef', 'Ei', 'analysator_wavevector', 'ath', 'att', 'ki', 'kf', 'lambda', 'sth', 'stt'],
+                   'sample_table' : ['stx', 'sty', 'stz'],
+                   'MIEZE_setup' : ['tau_mieze', 'freq_A', 'freq_B', 'chop_freq', 'timebin_freq'],
+                   'coils' : ['B0_A', 'B0_B', 'BHelmholtz_A', 'BHemlholtz_B', 'Bflip_A', 'Bflip_B'],
+                   'fast_results' : ['roi_counts', 'total_counts', 'fit_contrast', 'fit_contrastErr', 'roi_contrast', 'roi_contrastErr']}
+    
+        with open(self.fpath, 'r') as f:
+            fi = f.readlines()
+            fi.reverse()
+            for i, line in enumerate(fi):
+                splitted_line = line.split()
+                for ky, kys in keys.items():
+                    try:
+                        if splitted_line[0] in kys and splitted_line[2] != splitted_line[-1]:
+                            temp = (float(splitted_line[2]), splitted_line[-1])
+                            metadata[ky][aliases[ky][keys[ky].index(splitted_line[0])]] = temp
+                        else:
+                            metadata[ky][aliases[ky][keys[ky].index(splitted_line[0])]] = splitted_line[2]
+                    except:
+                        pass
+                if i > len(fi)/4: # shorter runtime^^
+                    break
+        return metadata
+
+#------------------------------------------------------------------------------
+        
+    def __extract_cascadedata(self):
+        """
+        extracts the raw CASCADE-detector data from NICOS .tof - files and stores it in self._cascadedata
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        None
+        
+        Return:
+        ----------
+        cascadedata     : ndarray   : returns a numpy.ndarray object of .shape = (8, 16, 128, 128) and dtype = np.int32
+                                      data format is (foil, timebins, ypixel, xpixel)
+        
+        INFO:
+        -----
+        Check whether it actually is ..., ypixel, xpixel) array
+        """
+        
+        return fromfile(self.fpath, dtype = int32)[:128*128*16*8].reshape(8,16,128,128)
+
+#------------------------------------------------------------------------------
+
+    def get_metadata(self, *keys):
+        """
+        Returns the metadata specified by keys. Can be either 'mainkey' or 'subkey'.
+        Returns the entire dictionary if no key is given.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        *keys       : list  : list of keys for metadata retrieval
+        
+        Returns:
+        ----------
+        seldict     : dict  : dictionary containing metadata {'mainkey' : subdict, 'subkey' : item ,...}
+        """
+
+        seldict = {}
+        if keys:
+            for key in keys:
+                assert isinstance(key, str)
+                if key in self._metadata.keys():
+                    seldict.update({key : self._metadata[key]})
+                else:
+                    for subdict in self._metadata.itervalues():
+                        if key in subdict.keys():
+                            seldict.update({key : subdict[key]})
+            return seldict
+
+        else:
+            return self._metadata
+
+#------------------------------------------------------------------------------
+
+    def show_2D_panel(self, foil_index = 0, timebin_index = 0, **kwargs):
+        """
+        Fast visualization tool for 2D cascade data by specifing foil_index and timebin_index
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        foil_index      : int   : selects foil of the cascade data set
+        timebin_index   : int   : selects timebin of the cascade data set
+        
+        Returns:
+        ----------
+        None
+        """
+        
+        try:
+            self.show_image(self._cascadedata[foil_index, timebin_index], **kwargs)
+        except IndexError:
+            print("Probably foil_index = {} and timebin_index = {} are out of range with data array shape being {}".format(foil_index, timebin_index, self._cascadedata.shape[:2]))
+
+#------------------------------------------------------------------------------
+
+    @staticmethod
+    def show_image(Arr, cmap = plasma, norm = LogNorm(), origin = 'lower', **kwargs):
+        """
+        Fast visualization tool for 2D data if available as an array.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        Arr         : ndarray   : 2D data to be visualized
+        **kwargs    : dict      : **kwargs will be passed to plt.imshow function
+        
+        Return:
+        ----------
+        None
+        
+        INFO:
+        ----------
+        
+        """
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.imshow(Arr, cmap = cmap, norm = norm, origin = origin, **kwargs)
+        ax.set_xlabel('horizontal detector range [pixel]')
+        ax.set_ylabel('vertical detector range [pixel]')
+
+
+###############################################################################
+###############################################################################
+
+class AnalysisFrame_Base(DataFrame_NICOS):
+    """
+    AnalysisFrame class to apply individual analysis tools to the "DataFrame_NICOS"' raw data
+    Supports a 'local_memory' dictionary to store intermediate results
+    """
+    
+    def __init__(self, fname, drootpath = "./data/cascade", instrument = "MIRA"):
+        """
+        Constructor of an 'AnalysisFrame_Base' instance
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        fname       : str                   : name of the data file (*.tof)
+        drootpath   : str                   : path to the data directory, default './data/CASCADE'
+        instrument  : str                   : name of the instrument "MIRA", "RESEDA", "RESEDAlegacy" to use correct loading routine
+        
+        Return:
+        ----------
+        obj         : AnalysisFrame_NICOS   : AnalysisFrame_NICOS object associated with the given file.
+                                              Supports functionality for the MIEZE analysis and applies it to the loaded data
+        
+        INFO:
+        ----------
+        NEED to implement loader/DataFrame for "RESEDA" and "RESEDAlegacy" options
+        """
+        
+        if instrument == "MIRA":
+            DataFrame_NICOS.__init__(self, fname, drootpath)
+        
+        elif instrument == "RESEDA":
+            print("Loading RESEDA-NICOS data is not supported, yet.")
+        
+        elif instrument == "RESEDAlegacy":
+            print("Loading RESEDAlegacy-IGOR data is not supported, yet.")
+        
+        else:
+            print("No valid instrument has been specified, no data has been loaded. Options are: 'MIRA', 'RESEDA', 'RESEDAlegacy'")
+        
+        self._local_memory = {}
+        self._maskdict = {}
+
+#------------------------------------------------------------------------------
+
+    def dump_to_memory(self, key, value):
+        """
+        stores value in '_local_memory'
+        supposed to reduce re-computing intermediate results for further processing
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        key     : str       : key to label value in _local_memory
+        value   : anything  : value to be stored in '_local_memory'
+        
+        Returns:
+        ----------
+        None
+        
+        INFO:
+        ----------
+        A consistent naming convention should be developed to indicate the changes and analysis steps performed
+        in comparison to prioir steps, or the raw data.
+        """
+        
+        self._local_memory.update({key : value})
+        return None
+
+#------------------------------------------------------------------------------
+    
+    def get_from_memory(self, key):
+        """
+        returns value from 'self.local_memory[key]'
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        key     : str   : key to label value in _local_memory
+        
+        Returns:
+        ----------
+        self._local_memory[key] : anything  : value to be stored in '_local_memory'
+        """
+        
+        return self._local_memory[key]
+    
+#------------------------------------------------------------------------------
+        
+    def remove_from_memory(self, key):
+        """
+        removes item with key from memory
+        
+        Arguments:
+        ----------
+        key     : str   : key to label value in _local_memory
+        
+        Returns:
+        ----------
+        None
+        """
+        
+        del self._local_memory[key]
+        return None
+
+#------------------------------------------------------------------------------
+
 
 ###############################################################################
 ###############################################################################
@@ -76,7 +407,7 @@ class DataFrame_Base(object):
                             key = lambda s: int(s.split('_')[-1]))
 
 #------------------------------------------------------------------------------
-    
+
     def _calc_miezetau(self, **kwargs):
         """
         calculate mieze time from experimental setup
