@@ -13,7 +13,7 @@ mask classes
 import matplotlib.pyplot as plt
 from instrument import Instrument
 from matplotlib.cm import Greys
-from numpy import abs, arctan2, bool, deg2rad, float, nansum, sqrt, sum, ogrid, where, zeros
+from numpy import abs, arctan2, bool, deg2rad, float, nansum, reshape, sqrt, sum, ogrid, where, zeros
 from math import pi
 
 ###############################################################################
@@ -245,7 +245,7 @@ class Grid_mask(Mask_Base):
         
         Return:
         ----------
-        None    :       :
+        None    :       : 
         """
         
         temparr = where(self.mask %2 == 1, 1, -1)
@@ -303,6 +303,204 @@ class Grid_mask(Mask_Base):
                 expa_data[i*tile_size:(i+1)*tile_size, j*tile_size:(j+1)*tile_size] = el
             
         return expa_data
+
+
+###############################################################################
+###############################################################################
+
+class Sector_Mask(Mask_Base):
+    """
+    Sector_Mask class masking data in a circular or sector shape
+    """
+    
+    def __init__(self, nn, centre, inner_radius, outer_radius, angle_range, instrument):
+        """
+        Constructor of a Grid_mask objects.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        nn              : int           : mask array with dimension nn x nn
+        centre          : tuple         : indices of the beam center (center_xcoord, center_ycoord)
+        inner_radius    : int           : inner radius of a circular mask in pixel
+        outer_radius    : int           : outer radius of a circular mask in pixel
+        angle_range     : tuple         : (start_angle, end_angle) in  clockwise sense in degrees, from 0 to 360,
+                                          starting along the positive y-directio on the 2D panel.
+        instrument      : str           : specifies the instrument to access Instrument parameter dictionary
+                                          'MIRA', 'RESEDA', 'RESEDAlegacy'
+        
+        Return:
+        ----------
+        obj             : Sector_mask   : 
+        """
+        
+        Mask_Base.__init__(self, nn, instrument)
+        self.masktype = 'Sector mask'
+        self.centre = centre
+        self.r_i = inner_radius
+        self.r_o = outer_radius
+        self.tmin, self.tmax = deg2rad(angle_range)
+        self.create_sector_mask()
+        self.qxyz = zeros((self.nn, self.nn, 3))
+
+#------------------------------------------------------------------------------
+
+    def create_sector_mask(self):
+        """
+        Generates the array representation of the Sector_mask object.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self    :       : 
+        
+        Returns:
+        ----------
+        None    :       : 
+        """
+
+        y,x = ogrid[:self.nn,:self.nn]
+        cx,cy = self.centre
+        
+        #ensure stop angle > start angle
+        if self.tmax<self.tmin:
+            self.tmax += 2*pi
+        #convert cartesian --> polar coordinates
+        r2 = (x-cx)*(x-cx) + (y-cy)*(y-cy)
+        theta = arctan2(x-cx,y-cy) - self.tmin
+        #wrap angles between 0 and 2*pi
+        theta %= (2*pi)
+        #circular mask
+        circmask = r2 <= self.r_o*self.r_o
+        circmask2 = r2 >= self.r_i*self.r_i
+        # angular mask
+        anglemask = theta <= (self.tmax-self.tmin)
+
+        self.mask = circmask*circmask2*anglemask
+
+#------------------------------------------------------------------------------
+        
+    def every_q(self):
+        """
+        Calculates the qx, qy, qz value of a neutron arriving at a certain detector pixel,
+        considering the center of the mask to be the direct beam spot at on the detector.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self    :       : 
+        
+        Returns:
+        ----------
+        None    :       : 
+        """
+
+        cx, cy = self.centre
+        qq = (2*pi/6.0)
+
+        for x in xrange(cx - (self.r_o + 1), cx + (self.r_o + 2)):
+            for y in xrange(cy - (self.r_o + 1), cy + (self.r_o + 2)):
+                n_path_length = sqrt(self.d_SD**2 + self.pixelsize**2*(x-cx)**2 + self.pixelsize**2*(y-cy)**2)
+                try:
+                    self.qxyz[y,x,0] = self.pixelsize*(x-cx)/n_path_length * qq
+                    self.qxyz[y,x,1] = self.pixelsize*(y-cy)/n_path_length * qq
+                    self.qxyz[y,x,2] = (self.d_SD/n_path_length - 1) * qq
+                    
+                except IndexError:
+                    pass
+
+#------------------------------------------------------------------------------
+
+    def q(self, counter = 0):
+        """
+        Calculates the average |q| value of a sector mask.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        counter     : int   : counter to supress recalculation of all the momentum components
+        
+        Return:
+        ----------
+        q_abs       : float : absolute momentum transfer considering quasi elastic scattering
+        q_abs_err   : float : error of the absolute momentum transfer
+        """
+
+        while counter < 2:
+#            q_abs = np.sqrt(np.sum(self.qxyz**2, axis = 2)) * self.mask / self.mask.sum()
+            q_abs = sum(sqrt(sum(self.qxyz**2, axis = 2)) * self.mask) / self.mask.sum()
+            q_abs_err = sqrt(1.0/(self.mask.sum() - 1) * sum(((sqrt(sum(self.qxyz**2, axis = 2)) - q_abs) * self.mask)**2))
+            if q_abs.any() != 0:
+                return q_abs, q_abs_err
+            else:
+                self.every_q()
+                self.q(counter + 1)
+
+#------------------------------------------------------------------------------
+
+    def show_post_mask(self):
+        """
+        Fast visualization of the Sector_mask.mask array
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self    :       : 
+        
+        Return:
+        ----------
+        None    :       :
+        """
+        
+        Mask_Base.show_mask(where(self.mask == True, 1, 0), self.masktype)
+
+#------------------------------------------------------------------------------
+
+    def _contract_data(self, data):
+        """
+        Contracts the data set by applying selecting data points according to the masks shape.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        data        : ndarray       : MIEZE data of shape (#xpixel, #ypixel)
+        
+        Return:
+        ----------
+        contr_data  : int / float   : summed data points over the non masked values
+        """
+        
+        return sum(data * self.mask)
+
+#------------------------------------------------------------------------------
+
+    def apply_mask(self, data, task = 'contract'):
+        """
+        Applies a given task to the supplied data.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        data        : ndarray   : data array of the form: (n_1, n_2, ..., n_x, #xpixel, #ypixel)
+        task        : str       : specifies task to perform with selected data points
+                              'contract': sum over all points on the 2D detector
+        
+        Return:
+        ----------
+        proc_dat    : ndarray   : processed data of shape (n_1, n_2, ..., n_x, some_method(array*mask))
+        """
+        
+        reshaped_data = data.reshape((-1,) + data.shape[-2:])
+        for panelind, panel in enumerate(reshaped_data):
+            if task == 'contract':
+                reshaped_data[panelind] = self._contract_data(panel)
+            elif task == 'cut':
+                print("The 'cut' option has not been implemented, yet.")
+            elif task == 'average':
+                print("The 'average' option has not been implemented, yet.")
+            else:
+                print("The '{}' option is not known. Possible typo?".format(task))
+        return reshaped_data.reshape(data.shape)
 
 
 ###############################################################################
