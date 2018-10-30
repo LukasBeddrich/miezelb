@@ -11,8 +11,9 @@ mask classes
 ###############################################################################
 
 import matplotlib.pyplot as plt
+from instrument import Instrument
 from matplotlib.cm import Greys
-from numpy import abs, arctan2, bool, deg2rad, float, sqrt, sum, ogrid, where, zeros
+from numpy import abs, arctan2, bool, deg2rad, float, nansum, sqrt, sum, ogrid, where, zeros
 from math import pi
 
 ###############################################################################
@@ -20,50 +21,93 @@ from math import pi
 
 class Mask_Base(object):
     """
-    Mask Base class
+    Mask_Base class to generate basic mask object and support some functionality
     """
-    def __init__(self, nn = 128):
+    
+    def __init__(self, nn = 128, instrument = 'MIRA'):
         """
-        Mask Base init function
-        arguments:
-                    nn(int):        mask array with dimension nnxnn
+        Constructor of any Mask_Base objects.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        nn          : int   : mask array with dimension nn x nn
+        instrument  : str   : specifies the instrument to access Instrument parameter dictionary
+                              'MIRA', 'RESEDA', 'RESEDAlegacy'
+        
+        Return:
+        ----------
+        obj         : Mask_Base     : Mask_Base object
         """
+        
         self.nn = nn
-        # Create a basic value class eventually!
-        self.d_SD = 2.25 # sample-detector-distance in meters
-        self.pixelsize = 0.0015625 # dimension of a quadratic pixel of the CASCADE detector
+        self.d_SD = Instrument.get_Parameters(instrument, 'distance_SD') # sample-detector-distance in meters --> in Instrument class
+#        self.pixelsize = Instrument.get_Parameters(instrument, 'pixelsize')
+        self.pixelsize = 0.0015625 # dimension of a quadratic pixel of the CASCADE detector --> build into instrument class
         self.mask = zeros((self.nn, self.nn), dtype = float)
         self.masktype = 'Mask_Base'
+        self.instrument = instrument
         
 #------------------------------------------------------------------------------
         
     def __repr__(self):
         """
-        official string description
+        Official string description.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self        :               : 
+            
+        Return:
+        ----------
+        desc_str    : str           : description of the object
         """
-        return '{}x{} {}'.format(str(self.nn), str(self.nn), self.masktype)
+        
+        return '{}x{} {} for {} data'.format(str(self.nn), str(self.nn), self.masktype, self.instrument)
 
 #------------------------------------------------------------------------------
 
     def getMask(self):
         """
-        returns mask
+        Returns array representation of the mask.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self        :               : 
+            
+        Return:
+        ----------
+        self.mask   : ndarray   : array representation
         """
+        
         return self.mask
 
 #------------------------------------------------------------------------------
 
     def shape(self):
         """
-        returns mask shape
+        Returns shape/dimensions of the mask
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self        :               : 
+            
+        Return:
+        ----------
+        shape       : tuple     : dimensions of the masks array representation
         """
-        return self.mask.shape
+        return (self.nn,)*2
 
 #------------------------------------------------------------------------------
 
     @staticmethod
     def combine_masks(pres, posts, non_bool = True):
         """
+        DEPRECIATED function!
+        
         mainly for visualization purpose
         pres and posts are Pre_mask or Post_sector_mask instances
         combines [pre1, pre2, ..., pren] and [post1, post2, ..., postm] to
@@ -85,8 +129,19 @@ class Mask_Base(object):
     @staticmethod
     def show_mask(m_array, title = None):
         """
+        Fast visualization tool for the mask array.
+        --------------------------------------------------
         
+        Arguments:
+        ----------
+        m_array     : ndarray       : 2D mask array to be visualized
+        titel       : str / None    : titel of graphic, if provided 
+        
+        Return:
+        ----------
+        None
         """
+        
         fig = plt.figure()
         ax = fig.add_subplot(111)
         ax.imshow(m_array, cmap = Greys, origin = 'lower')
@@ -95,12 +150,167 @@ class Mask_Base(object):
         if title is not None: ax.set_title('{}'.format(title))
         return None
 
+
 ###############################################################################
 ###############################################################################
 
+class Grid_mask(Mask_Base):
+    """
+    Grid_Mask class for pre-grouping Cascade Detector pixel with quadratic tiles.
+    Subclass of Mask_Base
+    """
+    
+    def __init__(self, tile_size, nn, instrument):
+        """
+        Constructor of a Grid_mask objects.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        tile_size   : int           : dimensions of the tiles, which build up the grid
+        nn          : int           : mask array with dimension nn x nn
+        instrument  : str           : specifies the instrument to access Instrument parameter dictionary
+                                      'MIRA', 'RESEDA', 'RESEDAlegacy'
+        
+        Return:
+        ----------
+        obj         : Grid_mask     : 
+        """
+
+        Mask_Base.__init__(self, nn, instrument)
+        self.masktype = 'Grid_mask'
+        
+        if nn % tile_size == 0:
+            self.tile_size = tile_size
+        else:
+            print 'tile_size is not a divisor of nn! tile_size set to 1.'
+            self.tile_size = 1
+        
+        self.create_grid_mask()
+
+#------------------------------------------------------------------------------
+
+    def create_grid_mask(self):
+        """
+        Creates tiled Grid_mask array
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self    :       : 
+        
+        Return:
+        ----------
+        None    : None  :
+        """
+        
+        ratio = self.nn/self.tile_size
+        for i in xrange(ratio):
+            for j in xrange(ratio):
+                self.mask[i*self.tile_size:(i + 1)*self.tile_size, j*self.tile_size:(j + 1)*self.tile_size] = i*ratio + j
+
+#------------------------------------------------------------------------------
+
+    def changetile_size(self, new_tile_size):
+        """
+        Changes self.tile_size of the Grid_mask. Only proper divisors of self.nn will be accepted.
+        mask array will be updated.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        new_tile_size   : int   : dimensions of the tiles, which build up the grid
+        
+        Retrun:
+        ----------
+        None            : None  :
+        """
+        
+        if self.nn % new_tile_size == 0:
+            self.tile_size = new_tile_size
+            self.create_grid_mask()
+        else:
+            print('tile_size is not a divisor of nn! Nothing will be updated.')
+
+#------------------------------------------------------------------------------
+
+    def show_Grid_mask(self):
+        """
+        Fast visualization of the Grid_mask.mask array
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        self    :       : 
+        
+        Return:
+        ----------
+        None    :       :
+        """
+        
+        temparr = where(self.mask %2 == 1, 1, -1)
+        if (self.nn / self.tile_size) % 2 == 0:
+            temparr = abs(temparr + temparr.T) - 1
+        self.show_mask(temparr, self.masktype)
+
+#------------------------------------------------------------------------------
+
+    def _contract_data(self, data):
+        """
+        Contracts the data set by applying the grid of the mask.
+        data.shape = (128,128) & mask.shape = (128,128) | mask.tile_size = 4 ==> contr_data.shape = (32,32)
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        data        : ndarray   : MIEZE data of shape (#xpixel, #ypixel)
+        
+        Return:
+        ----------
+        contr_data  : ndarray   : contracted (summed for each tile) of shape (#xpixel/tile_size, #ypixel/tile_size)
+        """
+        
+        tiles_per_row = self.nn/self.tile_size
+        contr_data = zeros(tiles_per_row*tiles_per_row)
+        for i in xrange(tiles_per_row*tiles_per_row):
+            mask_tile = where(self.mask == i, 1., 0.)
+            contr_data[i] = nansum(mask_tile*data)
+            
+        return contr_data.reshape((tiles_per_row, tiles_per_row))
+
+#------------------------------------------------------------------------------
+
+    def _expand_data(self, data):
+        """
+        Expands data by if array dimensions fit to Grid_mask.
+        data.shape = (128,128) & mask.shape = (256,256) | mask.tile_size = 2 ==> expa_data.shape = (256,256)
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        data        : ndarray   : MIEZE data of shape (#x, #y)
+        
+        Return:
+        ----------
+        expa_data  : ndarray   : expanded (copied the same value of smaller array to indices of a tile) data
+                                 of shape (#x*tile_size, #y*tile_size)
+        """
+        
+        tile_size = self.tile_size
+        expa_data = zeros((self.nn,)*2)
+        for i, row in enumerate(data):
+            for j, el in enumerate(row):
+                expa_data[i*tile_size:(i+1)*tile_size, j*tile_size:(j+1)*tile_size] = el
+            
+        return expa_data
+
+
+###############################################################################
+###############################################################################
 
 class Pre_mask(Mask_Base):
     """
+    DEPRECIATED CLASS
     Pre_masks Class for pre-grouping Cascade Detector pixel with quadratic tiles
     """
     def __init__(self, nn, tile_size):
