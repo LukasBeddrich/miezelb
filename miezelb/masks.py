@@ -506,6 +506,55 @@ class Sector_Mask(Mask_Base):
 ###############################################################################
 ###############################################################################
 
+class Square_Mask(Mask_Base):
+    """
+    Square_Mask class masking data in a rectangular shape.
+    """
+
+    def __init__(self, nn, instrument, llbh, *args):
+        """
+        Constructor of a Square_mask objects.
+        --------------------------------------------------
+        
+        Arguments:
+        ----------
+        nn              : int           : mask array with dimension nn x nn
+        instrument      : str           : specifies the instrument to access Instrument parameter dictionary
+                                          'MIRA', 'RESEDA', 'RESEDAlegacy'
+        llbh            : tuple         : (left, length, bottom, height) in pixels
+        args            : list          : [left2, length2, bottom2, height2, left3, ... heightn]
+        
+        Return:
+        ----------
+        obj             : Square_mask   : 
+        """
+        
+        
+        Mask_Base.__init__(self, nn, instrument)
+        self.masktype = 'Square mask'
+        
+        self.lefts, self.lengths, self.bottoms, self.heights = llbh
+        if len(args) % 4 == 0 and len(args) != 0:
+            for i, el in enumerate(args):
+                if i % 4 == 2:
+                    self.lefts.append(el)
+                elif i % 4 == 3:
+                    self.lengths.append(el)
+                elif i % 4 == 0:
+                    self.bottoms.append(el)
+                elif i % 4 == 1:
+                    self.heights.append(el)
+        
+        self.mask = self.mask.astype(bool)
+        for llbhval in xrange(len(self.lefts)):
+            self.mask[self.lefts[llbhval]:self.lefts[llbhval] + self.lengths[llbhval], self.bottoms[llbhval]:self.bottoms[llbhval] + self.heights[llbhval]] = True
+
+#------------------------------------------------------------------------------
+
+
+###############################################################################
+###############################################################################
+
 class Pre_mask(Mask_Base):
     """
     DEPRECIATED CLASS
