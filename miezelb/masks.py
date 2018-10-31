@@ -42,7 +42,7 @@ class Mask_Base(object):
         
         self.nn = nn
         self.d_SD, self.s_SD_err, self.d_SD_unit = Instrument.get_Parameters(instrument, 'distance_SD')['distance_SD'] # sample-detector-distance in meters --> in Instrument class
-#        self.pixelsize = Instrument.get_Parameters(instrument, 'pixelsize')
+#        self.pixelsize, self.pixelsize_err, self.pixelsize_unit = Instrument.get_Parameters(instrument, 'pixelsize')['pixelsize']
         self.pixelsize = 0.0015625 # dimension of a quadratic pixel of the CASCADE detector --> build into instrument class
         self.mask = zeros((self.nn, self.nn), dtype = float)
         self.masktype = 'Mask_Base'
@@ -438,7 +438,7 @@ class Sector_Mask(Mask_Base):
 
 #------------------------------------------------------------------------------
 
-    def show_post_mask(self):
+    def show_sector_mask(self):
         """
         Fast visualization of the Sector_mask.mask array
         --------------------------------------------------
@@ -449,7 +449,7 @@ class Sector_Mask(Mask_Base):
         
         Return:
         ----------
-        None    :       :
+        None    :       : 
         """
         
         Mask_Base.show_mask(where(self.mask == True, 1, 0), self.masktype)
