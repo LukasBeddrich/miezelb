@@ -41,7 +41,7 @@ class Mask_Base(object):
         """
         
         self.nn = nn
-        self.d_SD = Instrument.get_Parameters(instrument, 'distance_SD') # sample-detector-distance in meters --> in Instrument class
+        self.d_SD, self.s_SD_err, self.d_SD_unit = Instrument.get_Parameters(instrument, 'distance_SD')['distance_SD'] # sample-detector-distance in meters --> in Instrument class
 #        self.pixelsize = Instrument.get_Parameters(instrument, 'pixelsize')
         self.pixelsize = 0.0015625 # dimension of a quadratic pixel of the CASCADE detector --> build into instrument class
         self.mask = zeros((self.nn, self.nn), dtype = float)
