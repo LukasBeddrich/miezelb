@@ -183,7 +183,7 @@ class Grid_mask(Mask_Base):
         if nn % tile_size == 0:
             self.tile_size = tile_size
         else:
-            print 'tile_size is not a divisor of nn! tile_size set to 1.'
+            print('tile_size is not a divisor of nn! tile_size set to 1.')
             self.tile_size = 1
         
         self.create_grid_mask()
@@ -572,7 +572,7 @@ class Pre_mask(Mask_Base):
         if nn % tile_size == 0:
             self.tile_size = tile_size
         else:
-            print 'tile_size is not a divisor of nn! tile_size set to 1.'
+            print('tile_size is not a divisor of nn! tile_size set to 1.')
             self.tile_size = 1
         self.create_pre_mask()
 
@@ -585,7 +585,7 @@ class Pre_mask(Mask_Base):
         if self.nn % tile_size == 0:
             self.tile_size = tile_size
         else:
-            print 'tile_size is not a divisor of nn! tile_size set to 1.'
+            print('tile_size is not a divisor of nn! tile_size set to 1.')
             self.tile_size = 1
 
 #------------------------------------------------------------------------------
