@@ -5,3 +5,6 @@
 
 # ignore the notebook internal .spyproject/ directory
 .spyproject/
+
+# ignore .ipynb
+*ipynb*
