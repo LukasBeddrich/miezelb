@@ -11,7 +11,7 @@ mask classes
 ###############################################################################
 
 import matplotlib.pyplot as plt
-from instrument import Instrument
+from .instrument import Instrument
 from matplotlib.cm import Greys
 from numpy import abs, arctan2, bool, deg2rad, float, nansum, reshape, sqrt, sum, ogrid, where, zeros
 from math import pi
@@ -205,8 +205,8 @@ class Grid_mask(Mask_Base):
         """
         
         ratio = self.nn/self.tile_size
-        for i in xrange(ratio):
-            for j in xrange(ratio):
+        for i in range(ratio):
+            for j in range(ratio):
                 self.mask[i*self.tile_size:(i + 1)*self.tile_size, j*self.tile_size:(j + 1)*self.tile_size] = i*ratio + j
 
 #------------------------------------------------------------------------------
@@ -272,7 +272,7 @@ class Grid_mask(Mask_Base):
         
         tiles_per_row = self.nn/self.tile_size
         contr_data = zeros(tiles_per_row*tiles_per_row)
-        for i in xrange(tiles_per_row*tiles_per_row):
+        for i in range(tiles_per_row*tiles_per_row):
             mask_tile = where(self.mask == i, 1., 0.)
             contr_data[i] = nansum(mask_tile*data)
             
@@ -398,8 +398,8 @@ class Sector_Mask(Mask_Base):
         cx, cy = self.centre
         qq = (2*pi/6.0)
 
-        for x in xrange(cx - (self.r_o + 1), cx + (self.r_o + 2)):
-            for y in xrange(cy - (self.r_o + 1), cy + (self.r_o + 2)):
+        for x in range(cx - (self.r_o + 1), cx + (self.r_o + 2)):
+            for y in range(cy - (self.r_o + 1), cy + (self.r_o + 2)):
                 n_path_length = sqrt(self.d_SD**2 + self.pixelsize**2*(x-cx)**2 + self.pixelsize**2*(y-cy)**2)
                 try:
                     self.qxyz[y,x,0] = self.pixelsize*(x-cx)/n_path_length * qq
@@ -511,7 +511,7 @@ class Square_Mask(Mask_Base):
     Square_Mask class masking data in a rectangular shape.
     """
 
-    def __init__(self, nn, instrument, llbh, *args):
+    def __init__(self, nn, instrument, left, length, bottom, height, *args):
         """
         Constructor of a Square_mask objects.
         --------------------------------------------------
@@ -533,7 +533,7 @@ class Square_Mask(Mask_Base):
         Mask_Base.__init__(self, nn, instrument)
         self.masktype = 'Square mask'
         
-        self.lefts, self.lengths, self.bottoms, self.heights = llbh
+        self.lefts, self.lengths, self.bottoms, self.heights = [left], [length], [bottom], [height]
         if len(args) % 4 == 0 and len(args) != 0:
             for i, el in enumerate(args):
                 if i % 4 == 2:
@@ -546,12 +546,34 @@ class Square_Mask(Mask_Base):
                     self.heights.append(el)
         
         self.mask = self.mask.astype(bool)
-        for llbhval in xrange(len(self.lefts)):
+        for llbhval in range(len(self.lefts)):
             self.mask[self.lefts[llbhval]:self.lefts[llbhval] + self.lengths[llbhval], self.bottoms[llbhval]:self.bottoms[llbhval] + self.heights[llbhval]] = True
 
 #------------------------------------------------------------------------------
 
+    def show_square_mask(self):
+        """
+        Fast visualization of the Square_mask.mask array
+        --------------------------------------------------
 
+        Arguments:
+        ----------
+        self    :       : 
+        
+        Return:
+        ----------
+        None    :       : 
+        """
+
+        self.show_mask(self.mask, self.masktype)
+
+#------------------------------------------------------------------------------
+
+###############################################################################
+###############################################################################
+###############################################################################
+###############     EVERYTHING BELOW IS NOT IN USE ANYMORE     ###############
+###############################################################################
 ###############################################################################
 ###############################################################################
 
@@ -595,8 +617,8 @@ class Pre_mask(Mask_Base):
         creates tiled pregrouping mask array
         """
         ratio = self.nn/self.tile_size
-        for i in xrange(ratio):
-            for j in xrange(ratio):
+        for i in range(ratio):
+            for j in range(ratio):
                 self.mask[i*self.tile_size:(i + 1)*self.tile_size, j*self.tile_size:(j + 1)*self.tile_size] = i*ratio + j
 
 #------------------------------------------------------------------------------
@@ -639,6 +661,8 @@ class Pre_mask(Mask_Base):
 class Post_sector_mask(Mask_Base):
     """
     Post mask with circular or sector shape
+    
+    THE USAGE OF THIS CLASS IS DEPRECIATED!
     """
     
     def __init__(self, nn, centre, inner_radius, outer_radius, angle_range):
@@ -690,8 +714,8 @@ class Post_sector_mask(Mask_Base):
         cx, cy = self.centre
         qq = (2*pi/6.0)
 
-        for x in xrange(cx - (self.r_o + 1), cx + (self.r_o + 2)):
-            for y in xrange(cy - (self.r_o + 1), cy + (self.r_o + 2)):
+        for x in range(cx - (self.r_o + 1), cx + (self.r_o + 2)):
+            for y in range(cy - (self.r_o + 1), cy + (self.r_o + 2)):
                 n_path_length = sqrt(self.d_SD**2 + self.pixelsize**2*(x-cx)**2 + self.pixelsize**2*(y-cy)**2)
                 try:
                     self.qxyz[y,x,0] = self.pixelsize*(x-cx)/n_path_length * qq
@@ -700,8 +724,8 @@ class Post_sector_mask(Mask_Base):
                     
                 except IndexError:
                     pass
-#        for x in xrange(self.nn):
-#            for y in xrange(self.nn):
+#        for x in range(self.nn):
+#            for y in range(self.nn):
 #                n_path_length = np.sqrt(self.d_SD**2 + self.pixelsize**2*(x-cx)**2 + self.pixelsize**2*(y-cy)**2)
 #                self.qxyz[y,x,0] = self.pixelsize*(x-cx)/n_path_length * qq
 #                self.qxyz[y,x,1] = self.pixelsize*(y-cy)/n_path_length * qq
@@ -740,6 +764,8 @@ class Post_sector_mask(Mask_Base):
 class Post_square_mask(Mask_Base):
     """
     Post mask with rectangular shape(s)
+    
+    THIS CLASS IS DEPRECIATED!
     """
 
     def __init__(self, nn, llbh, *args):
@@ -772,7 +798,7 @@ class Post_square_mask(Mask_Base):
 # =============================================================================
         
         self.mask = self.mask.astype(bool)
-        for llbhval in xrange(len(self.lefts)):
+        for llbhval in range(len(self.lefts)):
             self.mask[self.lefts[llbhval]:self.lefts[llbhval] + self.lengths[llbhval], self.bottoms[llbhval]:self.bottoms[llbhval] + self.heights[llbhval]] = True
 
 ###############################################################################
